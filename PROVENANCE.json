@@ -1,0 +1,39 @@
+{
+  "source_repository": "https://github.com/try-auroraview/auroraview",
+  "original_repository": "https://github.com/loonghao/auroraview",
+  "source_commit": "11b3a29ad95a46cb22aaa604614de16da16bfc22",
+  "source_tree": "4c66e7976d6cf8ea85821ed8d32b0c6d20723c1e",
+  "source_branch": "main",
+  "source_main_commits": 1623,
+  "history_preserved": true,
+  "history_scope": "selected public paths including dispatcher predecessor; rewritten Git hashes",
+  "filtered_head": "5169694e541d1d3b4a953f289280ba5d46bae2c3",
+  "retained_commits": 9,
+  "tags_copied": false,
+  "github_issues_copied": false,
+  "filter_tool": "git-filter-repo",
+  "path_mapping": {
+    "LICENSE": "LICENSE",
+    "python/auroraview/utils/thread_dispatcher.py": "migration/legacy-thread-dispatcher.py (historical; deleted upstream)",
+    "python/auroraview/utils/thread_dispatcher/backends/nuke.py": "src/auroraview_nuke/dispatcher.py",
+    "python/auroraview/adapter/hosts.py": "src/auroraview_nuke/host.py (narrowed to Nuke during initialization)",
+    "tests/python/integration/test_nuke_ipc.py": "migration/manual/test_nuke_ipc.py (SDK-dependent and manual; excluded from automated gates)"
+  },
+  "commit_map_sha256": "5480ffc1f53561b2a606765a75160c559e51ee68e3d5c7fd70171f30506d710d",
+  "source_files": {
+    "LICENSE": "471e51d3c7259a8f2d91fd4d5d6c5990d391d0dc848993095fb7095cd3dcab06",
+    "python/auroraview/utils/thread_dispatcher/backends/nuke.py": "7ebccb50a53fbf1d7eee2b10d296ef2be83e7ddc9f62a93f09664c4c49e98432",
+    "python/auroraview/adapter/hosts.py": "c416ff948b1c117fe03d5269f64f53a9ae086c9d0457841bdf6f5c4428f754d1",
+    "tests/python/integration/test_nuke_ipc.py": "373cd2831f87d49d36f7b649dce24fffb7a68bf72b1726214b0d5a76897d2edc"
+  },
+  "source_hash_policy": {
+    "LICENSE": "normalize CRLF to LF before SHA256; MIT text unchanged",
+    "python": "raw upstream Git bytes; LF"
+  },
+  "implementation_changes": [
+    "Dispatcher shared base import now points to Core; Nuke API delegates are unchanged.",
+    "Shared host module narrowed to Nuke; existing Core Qt mixin/base retained.",
+    "Explicit registration replaces only known dispatcher specs using existing Core registries."
+  ],
+  "publication": "not published; development candidate; real Nuke/native bridge acceptance remains separate"
+}

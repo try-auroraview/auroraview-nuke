@@ -1,0 +1,122 @@
+name: Nuke adapter source and installed API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nuke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-package:
+    name: Source and installed adapter, ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+        python: ['3.7', '3.11', '3.12']
+    env:
+      AURORAVIEW_CORE_SOURCE: ${{ github.workspace }}/.core-source
+      UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v7
+        with:
+          repository: try-auroraview/auroraview
+          ref: 11b3a29ad95a46cb22aaa604614de16da16bfc22
+          path: .core-source
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: loonghao/vx@vx-v0.9.33
+        with:
+          version: '0.9.33'
+          github-token: ${{ github.token }}
+      - name: Prepare the actual matrix interpreter
+        shell: bash
+        run: |
+          python_path=$(python -c 'import sys; print(sys.executable)')
+          echo "AURORAVIEW_TEST_PYTHON=$python_path" >> "$GITHUB_ENV"
+          if [ '${{ matrix.python }}' = '3.7' ]; then backend='hatchling==1.17.1'; else backend='hatchling>=1.24'; fi
+          vx uv@0.12.7 pip install --python "$python_path" "$backend" "typing_extensions==4.7.1"
+          vx just --version
+      - name: Mocked source and grammar gate; no Nuke SDK
+        run: vx just test
+      - name: Isolated installed adapter with pinned source Core
+        run: vx just package-check
+
+  published-core:
+    name: Official installed Core0.5.11 API, Windows, Python ${{ matrix.python }}
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.7', '3.12']
+    env:
+      AURORAVIEW_CORE_SOURCE: unused-in-released-core-gate
+      UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: loonghao/vx@vx-v0.9.33
+        with:
+          version: '0.9.33'
+          github-token: ${{ github.token }}
+      - name: Install public binary Core and build dependencies in the matrix runtime
+        shell: bash
+        run: |
+          python_path=$(python -c 'import sys; print(sys.executable)')
+          echo "AURORAVIEW_TEST_PYTHON=$python_path" >> "$GITHUB_ENV"
+          if [ '${{ matrix.python }}' = '3.7' ]; then backend='hatchling==1.17.1'; else backend='hatchling>=1.24'; fi
+          vx uv@0.12.7 pip install --python "$python_path" --index-url https://pypi.org/simple "$backend" "typing_extensions==4.7.1"
+          vx uv@0.12.7 pip install --python "$python_path" --index-url https://pypi.org/simple --only-binary :all: auroraview==0.5.11
+          vx just --version
+      - run: vx just build artifact-check
+      - name: Install the actual adapter wheel and check dependency metadata
+        shell: bash
+        run: |
+          vx uv@0.12.7 pip install --python "$AURORAVIEW_TEST_PYTHON" --no-deps dist/*.whl
+          vx uv@0.12.7 pip check --python "$AURORAVIEW_TEST_PYTHON"
+      - name: Strict installed/native-import API gate; no real Nuke or WebView creation
+        run: vx just published-check
+
+  lint:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    env:
+      AURORAVIEW_CORE_SOURCE: unused-for-lint
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: loonghao/vx@vx-v0.9.33
+        with:
+          version: '0.9.33'
+          github-token: ${{ github.token }}
+      - name: Prepare lint dependencies
+        shell: bash
+        run: |
+          python_path=$(python -c 'import sys; print(sys.executable)')
+          echo "AURORAVIEW_TEST_PYTHON=$python_path" >> "$GITHUB_ENV"
+          vx uv@0.12.7 pip install --python "$python_path" ruff
+          vx just --version
+      - run: vx just lint format-check
